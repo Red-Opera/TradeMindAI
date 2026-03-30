@@ -79,13 +79,25 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <EnableIncrementalBuild>WithNinja</EnableIncrementalBuild>
+    <EnableIncrementalBuild>No</EnableIncrementalBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <EnableIncrementalBuild>WithNinja</EnableIncrementalBuild>
+    <EnableIncrementalBuild>No</EnableIncrementalBuild>
   </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp" />
+    <ClCompile Include="Core\NewsAPI\NewsAPI.cpp" />
+    <ClCompile Include="Utility\Coroutine\IEnumerator.cpp" />
+    <ClCompile Include="Utility\Coroutine\CoroutineManager.cpp" />
+    <ClCompile Include="Utility\Coroutine\WaitTime\WaitForSeconds.cpp" />
+    <ClCompile Include="Utility\Coroutine\WaitTime\WaitTime.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Core\NewsAPI\NewsAPI.h" />
+    <ClInclude Include="Utility\Coroutine\IEnumerator.h" />
+    <ClInclude Include="Utility\Coroutine\CoroutineManager.h" />
+    <ClInclude Include="Utility\Coroutine\WaitTime\WaitTime.h" />
+    <ClInclude Include="Utility\Coroutine\WaitTime\WaitForSeconds.h" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
