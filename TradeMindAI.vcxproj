@@ -91,6 +91,7 @@
     <ClCompile Include="Utility\Coroutine\CoroutineManager.cpp" />
     <ClCompile Include="Utility\Coroutine\WaitTime\WaitForSeconds.cpp" />
     <ClCompile Include="Utility\Coroutine\WaitTime\WaitTime.cpp" />
+    <ClCompile Include="Utility\Network.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Core\NewsAPI\NewsAPI.h" />
@@ -98,18 +99,25 @@
     <ClInclude Include="Utility\Coroutine\CoroutineManager.h" />
     <ClInclude Include="Utility\Coroutine\WaitTime\WaitTime.h" />
     <ClInclude Include="Utility\Coroutine\WaitTime\WaitForSeconds.h" />
+    <ClInclude Include="Utility\Network.h" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories) %(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CppLanguageStandard>c++20</CppLanguageStandard>
     </ClCompile>
+    <Link>
+      <LibraryDependencies>curl;tinyxml2;%(LibraryDependencies)</LibraryDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>./;%(AdditionalIncludeDirectories) %(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CppLanguageStandard>c++20</CppLanguageStandard>
     </ClCompile>
+    <Link>
+      <LibraryDependencies>curl;tinyxml2;%(LibraryDependencies)</LibraryDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

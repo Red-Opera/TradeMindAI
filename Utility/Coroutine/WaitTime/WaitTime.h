@@ -6,6 +6,7 @@ class WaitTime
 {
 public:
 	WaitTime();
+	virtual ~WaitTime() = default;
 
 	virtual bool IsDone() const;
 
