@@ -1,11 +1,12 @@
 ﻿#include "NewsAPI.h"
 
+#include "../Log.h"
 #include "Utility/Coroutine/IEnumerator.h"
 #include "Utility/Network.h"
 
 #include "tinyxml2.h"
 
-#include <iostream>
+#include <sstream>
 #include <vector>
 #include <string>
 #include <curl/curl.h>
@@ -14,6 +15,8 @@ using namespace tinyxml2;
 
 IEnumerator NewsAPI::UpdateNews()
 {
+	Log& log = Log::GetInstance();
+
 	while (true)
 	{
 		std::string query = "stock OR market OR economy when:1d";	// 최근 24시간 동안의 뉴스 검색
@@ -22,10 +25,10 @@ IEnumerator NewsAPI::UpdateNews()
 
 		for (const auto& news : newsList)
 		{
-			std::cout << "Title: " << news.title << std::endl;
-			std::cout << "Link: " << news.link << std::endl;
-			std::cout << "Date: " << news.date << std::endl;
-			std::cout << "-----------------------------" << std::endl;
+			log.Output(LogLevel::INFO, ("Title: " + news.title).c_str());
+			log.Output(LogLevel::INFO, ("Link: " + news.link).c_str());
+			log.Output(LogLevel::INFO, ("Date: " + news.date).c_str());
+			log.Output(LogLevel::INFO, "-----------------------------");
 		}
 
 		co_yield WaitForSeconds(2.0f);
@@ -34,12 +37,14 @@ IEnumerator NewsAPI::UpdateNews()
 
 std::string NewsAPI::GetRSS(const std::string& query)
 {
+	Log& log = Log::GetInstance();
+
 	// CURL 초기화
 	CURL* curl = curl_easy_init();
 
 	if (curl == nullptr)
 	{
-		std::cerr << "CURL 초기화 실패" << std::endl;
+		log.Output(LogLevel::ERROR, "CURL 초기화 실패");
 		return "";
 	}
 
@@ -48,7 +53,7 @@ std::string NewsAPI::GetRSS(const std::string& query)
 
 	if (encodedQuery == nullptr)
 	{
-		std::cerr << "쿼리 인코딩 실패" << std::endl;
+		log.Output(LogLevel::ERROR, "쿼리 인코딩 실패");
 		curl_easy_cleanup(curl);
 		return "";
 	}
@@ -57,7 +62,7 @@ std::string NewsAPI::GetRSS(const std::string& query)
 	std::string url = "https://news.google.com/rss/search?q=" + std::string(encodedQuery) + "&hl=ko&gl=KR&ceid=KR:ko";
 	curl_free(encodedQuery);
 
-	std::cout << "요청 URL: " << url << std::endl;
+	log.Output(LogLevel::INFO, ("요청 URL: " + url).c_str());
 
 	std::string readBuffer;
 
@@ -74,8 +79,10 @@ std::string NewsAPI::GetRSS(const std::string& query)
 	// 요청 실패 시 에러 메시지 출력
 	if (res != CURLE_OK)
 	{
-		std::cerr << "CURL 요청 실패. 에러 코드: " << res << std::endl;
-		std::cerr << "에러 메시지: " << curl_easy_strerror(res) << std::endl;
+		std::ostringstream errorCode;
+		errorCode << "CURL 요청 실패. 에러 코드: " << static_cast<int>(res);
+		log.Output(LogLevel::ERROR, errorCode.str().c_str());
+		log.Output(LogLevel::ERROR, (std::string("에러 메시지: ") + curl_easy_strerror(res)).c_str());
 		curl_easy_cleanup(curl);
 
 		return "";
@@ -83,8 +90,16 @@ std::string NewsAPI::GetRSS(const std::string& query)
 
 	long responseCode = 0;
 	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-	std::cout << "HTTP 응답 코드: " << responseCode << std::endl;
-	std::cout << "수신한 데이터 크기: " << readBuffer.length() << " bytes" << std::endl;
+	{
+		std::ostringstream responseLog;
+		responseLog << "HTTP 응답 코드: " << responseCode;
+		log.Output(LogLevel::INFO, responseLog.str().c_str());
+	}
+	{
+		std::ostringstream sizeLog;
+		sizeLog << "수신한 데이터 크기: " << readBuffer.length() << " bytes";
+		log.Output(LogLevel::INFO, sizeLog.str().c_str());
+	}
 
 	curl_easy_cleanup(curl);				// CURL 리소스 해제
 
@@ -94,18 +109,24 @@ std::string NewsAPI::GetRSS(const std::string& query)
 
 std::vector<NewsData> NewsAPI::ParseRSS(const std::string& rssData)
 {
+	Log& log = Log::GetInstance();
+
 	// News 데이터를 저장할 벡터
 	std::vector<NewsData> newsList;
 
 	// 수신한 데이터 확인
 	if (rssData.empty())
 	{
-		std::cerr << "수신한 RSS 데이터가 비어있습니다" << std::endl;
+		log.Output(LogLevel::WARNING, "수신한 RSS 데이터가 비어있습니다");
 
 		return newsList;
 	}
 
-	std::cout << "수신한 RSS 데이터 크기: " << rssData.length() << " bytes" << std::endl;
+	{
+		std::ostringstream rssSizeLog;
+		rssSizeLog << "수신한 RSS 데이터 크기: " << rssData.length() << " bytes";
+		log.Output(LogLevel::INFO, rssSizeLog.str().c_str());
+	}
 
 	XMLDocument document;
 	XMLError parseResult = document.Parse(rssData.c_str());
@@ -113,9 +134,11 @@ std::vector<NewsData> NewsAPI::ParseRSS(const std::string& rssData)
 	// XML 파싱이 실패한 경우 에러 메시지 출력
 	if (parseResult != XML_SUCCESS)
 	{
-		std::cerr << "RSS 파싱 실패. 에러 코드: " << parseResult << std::endl;
-		std::cerr << "에러 메시지: " << document.ErrorStr() << std::endl;
-		std::cerr << "처음 500 characters: " << rssData.substr(0, 500) << std::endl;
+		std::ostringstream parseError;
+		parseError << "RSS 파싱 실패. 에러 코드: " << static_cast<int>(parseResult);
+		log.Output(LogLevel::ERROR, parseError.str().c_str());
+		log.Output(LogLevel::ERROR, (std::string("에러 메시지: ") + document.ErrorStr()).c_str());
+		log.Output(LogLevel::ERROR, (std::string("처음 500 characters: ") + rssData.substr(0, 500)).c_str());
 
 		return newsList;
 	}
@@ -124,12 +147,12 @@ std::vector<NewsData> NewsAPI::ParseRSS(const std::string& rssData)
 
 	if (rssElement == nullptr)
 	{
-		std::cerr << "RSS 요소를 찾을 수 없습니다" << std::endl;
+		log.Output(LogLevel::ERROR, "RSS 요소를 찾을 수 없습니다");
 		// 첫 번째 요소가 무엇인지 확인
 		XMLElement* root = document.RootElement();
 		if (root != nullptr)
 		{
-			std::cerr << "실제 루트 요소: " << root->Name() << std::endl;
+			log.Output(LogLevel::ERROR, (std::string("실제 루트 요소: ") + root->Name()).c_str());
 		}
 		return newsList;
 	}
@@ -138,7 +161,7 @@ std::vector<NewsData> NewsAPI::ParseRSS(const std::string& rssData)
 
 	if (channelElement == nullptr)
 	{
-		std::cerr << "channel 요소를 찾을 수 없습니다" << std::endl;
+		log.Output(LogLevel::ERROR, "channel 요소를 찾을 수 없습니다");
 
 		return newsList;
 	}
