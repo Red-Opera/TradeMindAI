@@ -1,4 +1,4 @@
-#include "Core/NewsAPI/NewsAPI.h"
+﻿#include "Core/NewsAPI/NewsAPI.h"
 #include "Utility/Coroutine/CoroutineManager.h"
 
 #include <thread>
@@ -6,7 +6,9 @@
 int main()
 {
 	CoroutineManager& corutineManager = CoroutineManager::GetInstance();
-	corutineManager.Start(NewsAPI::UpdateNews());
+	NewsAPI& newsAPI = NewsAPI::GetInstance();	// 싱글톤 인스턴스 가져오기 (파일에서 뉴스 로드)
+
+	corutineManager.Start(newsAPI.UpdateNews());
 
 	while (true)
 	{
