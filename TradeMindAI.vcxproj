@@ -88,6 +88,7 @@
     <ClCompile Include="app.cpp" />
     <ClCompile Include="Core\Log.cpp" />
     <ClCompile Include="Core\NewsAPI\NewsAPI.cpp" />
+    <ClCompile Include="Utility\Convert.cpp" />
     <ClCompile Include="Utility\Directory.cpp" />
     <ClCompile Include="Utility\Coroutine\IEnumerator.cpp" />
     <ClCompile Include="Utility\Coroutine\CoroutineManager.cpp" />
@@ -99,6 +100,7 @@
     <ClInclude Include="Core\Config.h" />
     <ClInclude Include="Core\Log.h" />
     <ClInclude Include="Core\NewsAPI\NewsAPI.h" />
+    <ClInclude Include="Utility\Convert.h" />
     <ClInclude Include="Utility\Directory.h" />
     <ClInclude Include="Utility\Coroutine\IEnumerator.h" />
     <ClInclude Include="Utility\Coroutine\CoroutineManager.h" />

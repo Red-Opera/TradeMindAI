@@ -1,11 +1,11 @@
 ﻿#include "NewsAPI.h"
 
-#include "NewsAPI.h"
-#include "../Log.h"
-#include "../Config.h"
+#include "Core/Log.h"
+#include "Core/Config.h"
 #include "Utility/Coroutine/IEnumerator.h"
 #include "Utility/Network.h"
 #include "Utility/Directory.h"
+#include "Utility/Convert.h"
 
 #include "tinyxml2.h"
 
@@ -108,38 +108,27 @@ void NewsAPI::SaveNews() const
 
 	if (!file.is_open())
 	{
-		log.Output(LogLevel::ERROR, ("뉴스 파일 생성 실패: " + filePath).c_str());
+		log.Output(LogLevel::ERROR, ("뉴스 파일 생성 실패 : " + filePath).c_str());
+
 		return;
 	}
 
 	// JSON 형식으로 저장
-	file << "{\n";
-	file << "  \"news\": [\n";
+	json newsJson = json::array();
 
-	for (size_t i = 0; i < newsList.size(); ++i)
-	{
-		const auto& news = newsList[i];
+	for (const auto& news : newsList)
+		newsJson.push_back({ {"title", news.title}, {"link", news.link}, {"date", news.date} });
 
-		file << "    {\n";
-		file << "      \"title\": \"" << EscapeJsonString(news.title) << "\",\n";
-		file << "      \"link\": \"" << EscapeJsonString(news.link) << "\",\n";
-		file << "      \"date\": \"" << EscapeJsonString(news.date) << "\"\n";
-		file << "    }";
+	json root;
+	root["news"] = newsJson;
 
-		if (i < newsList.size() - 1)
-			file << ",";
-
-		file << "\n";
-	}
-
-	file << "  ]\n";
-	file << "}\n";
-
+	file << root.dump(2);
 	file.close();
 
-	std::ostringstream logMsg;
-	logMsg << "뉴스 데이터 저장됨: " << filePath << " (" << newsList.size() << "개)";
-	log.Output(LogLevel::INFO, logMsg.str().c_str());
+	std::ostringstream logMessage;
+	logMessage << "뉴스 데이터 저장됨: " << filePath << " (" << newsList.size() << "개)";
+
+	log.Output(LogLevel::INFO, logMessage.str().c_str());
 }
 
 void NewsAPI::LoadNews()
@@ -173,56 +162,6 @@ void NewsAPI::LoadNews()
 	log.Output(LogLevel::INFO, logMsg.str().c_str());
 }
 
-std::string NewsAPI::EscapeJsonString(const std::string& str) const
-{
-	std::string result;
-
-	for (char c : str)
-	{
-		switch (c)
-		{
-		case '"': result += "\\\""; break;
-		case '\\': result += "\\\\"; break;
-		case '\b': result += "\\b"; break;
-		case '\f': result += "\\f"; break;
-		case '\n': result += "\\n"; break;
-		case '\r': result += "\\r"; break;
-		case '\t': result += "\\t"; break;
-		default: result += c;
-		}
-	}
-
-	return result;
-}
-
-std::string NewsAPI::UnescapeJsonString(const std::string& str) const
-{
-	std::string result;
-
-	for (size_t i = 0; i < str.length(); ++i)
-	{
-		if (str[i] == '\\' && i + 1 < str.length())
-		{
-			switch (str[i + 1])
-			{
-			case '"': result += '"'; ++i; break;
-			case '\\': result += '\\'; ++i; break;
-			case 'b': result += '\b'; ++i; break;
-			case 'f': result += '\f'; ++i; break;
-			case 'n': result += '\n'; ++i; break;
-			case 'r': result += '\r'; ++i; break;
-			case 't': result += '\t'; ++i; break;
-			default: result += str[i];
-			}
-		}
-
-		else
-			result += str[i];
-	}
-
-	return result;
-}
-
 void NewsAPI::ParseJsonNews(const std::string& jsonContent)
 {
 	Log& log = Log::GetInstance();
@@ -230,65 +169,36 @@ void NewsAPI::ParseJsonNews(const std::string& jsonContent)
 	newsList.clear();
 	newsLinkSet.clear();
 
-	// "news": [ 찾기
-	size_t newsStart = jsonContent.find("\"news\":");
-
-	if (newsStart == std::string::npos)
+	try
 	{
-		log.Output(LogLevel::WARNING, "JSON에서 'news' 필드를 찾을 수 없습니다");
+		json jsonObject = Convert::ParseJsonString(jsonContent);
 
-		return;
-	}
-
-	// [ 찾기
-	size_t arrayStart = jsonContent.find('[', newsStart);
-
-	if (arrayStart == std::string::npos)
-	{
-		log.Output(LogLevel::WARNING, "JSON에서 배열 시작을 찾을 수 없습니다");
-
-		return;
-	}
-
-	// 각 객체 파싱
-	size_t pos = arrayStart + 1;
-	while (true)
-	{
-		// { 찾기
-		size_t objStart = jsonContent.find('{', pos);
-
-		if (objStart == std::string::npos)
-			break;
-
-		// } 찾기
-		size_t objEnd = jsonContent.find('}', objStart);
-
-		if (objEnd == std::string::npos)
-			break;
-
-		std::string objStr = jsonContent.substr(objStart + 1, objEnd - objStart - 1);
-
-		NewsData news;
-
-		// title 추출
-		if (ExtractJsonField(objStr, "title", news.title))
-			news.title = UnescapeJsonString(news.title);
-
-		// link 추출
-		if (ExtractJsonField(objStr, "link", news.link))
-			news.link = UnescapeJsonString(news.link);
-
-		// date 추출
-		if (ExtractJsonField(objStr, "date", news.date))
-			news.date = UnescapeJsonString(news.date);
-
-		if (!news.link.empty())
+		if (!jsonObject.contains("news") || !jsonObject["news"].is_array())
 		{
+			log.Output(LogLevel::WARNING, "JSON 형식이 올바르지 않습니다: 'news' 배열이 없습니다");
+
+			return;
+		}
+
+		// JSON 배열에서 뉴스 데이터 추출
+		for (const auto& item : jsonObject["news"])
+		{
+			NewsData news;
+			news.title = item.value("title", "");
+			news.link = item.value("link", "");
+			news.date = item.value("date", "");
+
+			if (news.link.empty())
+				continue;
+
 			newsList.push_back(news);
 			newsLinkSet.insert(news.link);
 		}
+	}
 
-		pos = objEnd + 1;
+	catch (const std::exception& e)
+	{
+		log.Output(LogLevel::WARNING, (std::string("JSON 파싱 오류: ") + e.what()).c_str());
 	}
 }
 
@@ -449,37 +359,4 @@ std::vector<NewsData> NewsAPI::ParseRSS(const std::string& rssData)
 	}
 
 	return newsList;
-}
-
-bool NewsAPI::ExtractJsonField(const std::string& jsonStr, const std::string& fieldName, std::string& fieldValue) const
-{
-	// "fieldName": "value" 형태로 찾기
-	std::string searchKey = "\"" + fieldName + "\"";
-	size_t keyPos = jsonStr.find(searchKey);
-
-	if (keyPos == std::string::npos)
-		return false;
-
-	// : 다음의 " 찾기
-	size_t valueStart = jsonStr.find('"', keyPos + searchKey.length());
-	if (valueStart == std::string::npos)
-		return false;
-
-	// 닫는 " 찾기 (이스케이프 처리 고려)
-	size_t valueEnd = valueStart + 1;
-
-	while (valueEnd < jsonStr.length())
-	{
-		if (jsonStr[valueEnd] == '"' && jsonStr[valueEnd - 1] != '\\')
-			break;
-
-		valueEnd++;
-	}
-
-	if (valueEnd >= jsonStr.length())
-		return false;
-
-	fieldValue = jsonStr.substr(valueStart + 1, valueEnd - valueStart - 1);
-
-	return true;
 }

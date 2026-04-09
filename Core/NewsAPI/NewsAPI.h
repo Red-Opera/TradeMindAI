@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Utility/Coroutine/IEnumerator.h"
+#include "Utility/Convert.h"
 
 #include <string>
 #include <vector>
@@ -37,12 +38,9 @@ private:
 
 	// JSON 처리 헬퍼 메서드
 	void ParseJsonNews(const std::string& jsonContent);
-	std::string EscapeJsonString(const std::string& str) const;
-	std::string UnescapeJsonString(const std::string& str) const;
-	bool ExtractJsonField(const std::string& jsonStr, const std::string& fieldName, std::string& fieldValue) const;
 
-	std::vector<NewsData> newsList;						// 중복이 제거된 뉴스 목록
-	std::unordered_set<std::string> newsLinkSet;		// 빠른 중복 검사를 위한 link 해시 셋
+	std::vector<NewsData> newsList;								// 중복이 제거된 뉴스 목록
+	std::unordered_set<std::string> newsLinkSet;				// 빠른 중복 검사를 위한 link 해시 셋
 
 	static constexpr const char* newsFileName = "NewsData.json";	// 뉴스 데이터 파일명
 };
